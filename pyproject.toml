@@ -7,17 +7,16 @@ name = "opencode-costs"
 version = "1.0.0"
 description = "Cost reporter for OpenCode sessions — detailed breakdown per agent and sub-agent"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.10"
 authors = [
     {name = "Carlos"}
 ]
-keywords = ["opencode", "cost", "llm", "tokens", "cli"]
+keywords = ["opencode", "cost", "llm", "tokens", "cli", "agent", "sub-agent"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -33,9 +32,9 @@ dependencies = [
 costs = "opencode_costs.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/caertos/opencode-costs"
-Repository = "https://github.com/caertos/opencode-costs"
-Issues = "https://github.com/caertos/opencode-costs/issues"
+Homepage = "https://github.com/Caertos/opencode-costs"
+Repository = "https://github.com/Caertos/opencode-costs"
+Issues = "https://github.com/Caertos/opencode-costs/issues"
 
 [tool.setuptools.packages.find]
 include = ["opencode_costs*"]
