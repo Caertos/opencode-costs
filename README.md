@@ -1,5 +1,10 @@
 # opencode-costs
 
+[![PyPI version](https://img.shields.io/pypi/v/opencode-costs.svg)](https://pypi.org/project/opencode-costs/)
+[![Downloads](https://img.shields.io/pypi/dm/opencode-costs.svg)](https://pypi.org/project/opencode-costs/)
+[![License](https://img.shields.io/pypi/l/opencode-costs.svg)](https://github.com/Caertos/opencode-costs/blob/main/LICENSE)
+[![Python](https://img.shields.io/pypi/pyversions/opencode-costs.svg)](https://pypi.org/project/opencode-costs/)
+
 > **Leer en [español](README_es.md)**
 
 Cost reporter for [OpenCode](https://opencode.ai) — detailed cost breakdown per agent and sub-agent.
