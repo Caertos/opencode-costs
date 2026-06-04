@@ -53,13 +53,21 @@ def print_session(roots: list[SessionNode], console: Console) -> None:
 
     sorted_agents = sorted(agent_stats.items(), key=lambda x: x[1]["cost"], reverse=True)
 
-    table = Table(box=box.SIMPLE_HEAVY, show_lines=False, padding=(0, 1))
+    table = Table(
+        box=box.SIMPLE_HEAVY,
+        show_lines=False,
+        padding=(0, 1),
+        show_header=True,
+        header_style="bold",
+    )
     table.add_column("Agente", style="cyan", min_width=22)
     table.add_column("Modelo", style="dim", min_width=14)
     table.add_column("Costo", justify="right", style="green", width=10)
     table.add_column("%", justify="right", width=5)
 
     for agent_name, stats in sorted_agents:
+        if stats["cost"] == 0 and stats["tokens_in"] == 0:
+            continue
         pct = (stats["cost"] / total_cost * 100) if total_cost > 0 else 0
         indent = "  " * stats["depth"]
         table.add_row(
@@ -78,8 +86,6 @@ def print_session(roots: list[SessionNode], console: Console) -> None:
     )
 
     console.print(table)
-
-    # Tokens summary line
     console.print(
         f"[dim]In:{format_tokens(total_tokens['input'])}  "
         f"Out:{format_tokens(total_tokens['output'])}  "
