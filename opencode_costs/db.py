@@ -23,7 +23,7 @@ SELECT id, parent_id, agent, model, cost,
        time_created, time_updated, title
 FROM session
 WHERE parent_id IS NULL AND directory = ?
-ORDER BY time_updated DESC
+ORDER BY time_created DESC
 LIMIT 1
 """
 
