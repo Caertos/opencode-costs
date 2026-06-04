@@ -35,7 +35,9 @@ pip install .
 !costs
 ```
 
-Eso es todo. Verás el desglose completo de costos de la sesión actual incluyendo todos los sub-agentes.
+Eso es todo. Verás el desglose completo de costos de la **sesión actual** incluyendo todos los sub-agentes.
+
+> **Auto-detección**: Al ejecutar dentro de OpenCode, la herramienta detecta automáticamente tu sesión actual comparando el directorio de trabajo. No necesitas pasar IDs de sesión manualmente.
 
 ### Referencia rápida
 
@@ -56,11 +58,7 @@ Si el output se corta en el terminal de OpenCode, ábrelo en una ventana separad
 !costs --window
 ```
 
-Esto abre una nueva ventana de terminal con el reporte completo sin truncar. También puedes usar el atajo:
-
-```
-!costs-window
-```
+Esto abre una nueva ventana de terminal con el reporte completo de la sesión actual sin truncar.
 
 ## Uso fuera de OpenCode
 

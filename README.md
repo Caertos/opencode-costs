@@ -35,7 +35,9 @@ pip install .
 !costs
 ```
 
-That's it. You'll see the full cost breakdown of the current session including all sub-agents.
+That's it. You'll see the full cost breakdown of the **current session** including all sub-agents.
+
+> **Auto-detection**: When running inside OpenCode, the tool automatically detects your current session by matching the working directory. No need to pass session IDs manually.
 
 ### Quick reference
 
@@ -56,11 +58,7 @@ If the output gets truncated in OpenCode's terminal, open it in a separate windo
 !costs --window
 ```
 
-This opens a new terminal window with the full, untruncated report. You can also use the shortcut:
-
-```
-!costs-window
-```
+This opens a new terminal window with the full, untruncated report of the current session.
 
 ## Usage outside OpenCode
 

@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,7 @@ from . import __version__
 from .db import (
     DB_PATH,
     QUERY_RECENT_SESSION,
+    QUERY_RECENT_SESSION_BY_DIR,
     QUERY_SESSION_BY_ID,
     QUERY_SESSION_TREE,
     get_db,
@@ -85,7 +87,15 @@ Examples:
                 print(f"Error: Session {args.session} not found", file=sys.stderr)
                 sys.exit(1)
         else:
-            row = conn.execute(QUERY_RECENT_SESSION).fetchone()
+            # When inside opencode, filter by current directory
+            if os.environ.get("OPENCODE") == "1":
+                cwd = os.getcwd()
+                row = conn.execute(QUERY_RECENT_SESSION_BY_DIR, (cwd,)).fetchone()
+                if not row:
+                    # Fallback to global recent session
+                    row = conn.execute(QUERY_RECENT_SESSION).fetchone()
+            else:
+                row = conn.execute(QUERY_RECENT_SESSION).fetchone()
             if not row:
                 print("Error: No sessions found", file=sys.stderr)
                 sys.exit(1)

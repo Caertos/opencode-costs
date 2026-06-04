@@ -16,6 +16,17 @@ ORDER BY time_updated DESC
 LIMIT 1
 """
 
+QUERY_RECENT_SESSION_BY_DIR = """
+SELECT id, parent_id, agent, model, cost,
+       tokens_input, tokens_output, tokens_reasoning,
+       tokens_cache_read, tokens_cache_write,
+       time_created, time_updated, title
+FROM session
+WHERE parent_id IS NULL AND directory = ?
+ORDER BY time_updated DESC
+LIMIT 1
+"""
+
 QUERY_SESSION_BY_ID = """
 SELECT id, parent_id, agent, model, cost,
        tokens_input, tokens_output, tokens_reasoning,
