@@ -22,56 +22,18 @@ from .models import (
 
 
 def print_session(roots: list[SessionNode], console: Console) -> None:
-    """Print session cost breakdown with rich formatting."""
+    """Print session cost breakdown with compact table format."""
     all_nodes = flatten_tree(roots)
     if not all_nodes:
         console.print("[yellow]No session data found.[/yellow]")
         return
 
     root = roots[0]
-
-    # Header
-    header = Text()
-    header.append("COST REPORT", style="bold cyan")
-    header.append(f"  {root.id}", style="dim")
-    if root.title:
-        header.append(f"  {root.title}", style="italic")
-    console.print(Panel(header, border_style="cyan"))
-
-    # Summary totals
     total_cost = root.aggregate_cost()
     total_tokens = root.aggregate_tokens()
-
-    summary = Table(show_header=False, box=None, padding=(0, 2))
-    summary.add_column("Label", style="bold")
-    summary.add_column("Value", justify="right")
-    summary.add_row("Cost Total", Text(format_cost(total_cost), style="bold green"))
-    summary.add_row("Tokens Input", format_tokens(total_tokens["input"]))
-    summary.add_row("Tokens Output", format_tokens(total_tokens["output"]))
-    summary.add_row("Reasoning", format_tokens(total_tokens["reasoning"]))
-    summary.add_row("Cache Read", format_tokens(total_tokens["cache_read"]))
-    summary.add_row("Cache Write", format_tokens(total_tokens["cache_write"]))
-    summary.add_row("Duration", duration_str(root.time_created, root.time_updated))
-    summary.add_row("Messages", str(len(all_nodes)))
-
-    console.print(Panel(summary, title="[bold]RESUMEN TOTAL[/bold]", border_style="green"))
+    duration = duration_str(root.time_created, root.time_updated)
 
     # Agent breakdown table
-    table = Table(
-        title="DESGLOSE POR AGENTE",
-        box=box.ROUNDED,
-        show_lines=True,
-        title_style="bold magenta",
-    )
-    table.add_column("Agente", style="cyan", min_width=25)
-    table.add_column("Sesiones", justify="center", width=8)
-    table.add_column("Costo", justify="right", style="green", width=12)
-    table.add_column("%", justify="right", width=6)
-    table.add_column("Tokens In", justify="right", width=10)
-    table.add_column("Tokens Out", justify="right", width=10)
-    table.add_column("Modelo", style="dim", min_width=15)
-
-    # Group by agent
     agent_stats: dict[str, dict] = {}
     for node in all_nodes:
         key = node.agent
@@ -82,7 +44,6 @@ def print_session(roots: list[SessionNode], console: Console) -> None:
                 "tokens_in": 0,
                 "tokens_out": 0,
                 "model": node.model_name,
-                "provider": node.provider_name,
                 "depth": node.depth,
             }
         agent_stats[key]["sessions"] += 1
@@ -90,40 +51,40 @@ def print_session(roots: list[SessionNode], console: Console) -> None:
         agent_stats[key]["tokens_in"] += node.tokens_input
         agent_stats[key]["tokens_out"] += node.tokens_output
 
-    # Sort by cost descending
     sorted_agents = sorted(agent_stats.items(), key=lambda x: x[1]["cost"], reverse=True)
+
+    table = Table(box=box.SIMPLE_HEAVY, show_lines=False, padding=(0, 1))
+    table.add_column("Agente", style="cyan", min_width=22)
+    table.add_column("Modelo", style="dim", min_width=14)
+    table.add_column("Costo", justify="right", style="green", width=10)
+    table.add_column("%", justify="right", width=5)
 
     for agent_name, stats in sorted_agents:
         pct = (stats["cost"] / total_cost * 100) if total_cost > 0 else 0
         indent = "  " * stats["depth"]
         table.add_row(
             f"{indent}{agent_name}",
-            str(stats["sessions"]),
-            format_cost(stats["cost"]),
-            f"{pct:.1f}%",
-            format_tokens(stats["tokens_in"]),
-            format_tokens(stats["tokens_out"]),
             stats["model"],
+            format_cost(stats["cost"]),
+            f"{pct:.0f}%",
         )
 
-    # Total row
+    table.add_section()
     table.add_row(
         Text("TOTAL", style="bold"),
-        str(len(all_nodes)),
+        "",
         Text(format_cost(total_cost), style="bold green"),
         "100%",
-        format_tokens(total_tokens["input"]),
-        format_tokens(total_tokens["output"]),
-        "",
-        end_section=True,
     )
 
     console.print(table)
 
-    # Footer
+    # Tokens summary line
     console.print(
-        f"\n[dim]Iniciada: {format_timestamp(root.time_created)} | "
-        f"Modelo principal: {root.model_name} ({root.provider_name})[/dim]"
+        f"[dim]In:{format_tokens(total_tokens['input'])}  "
+        f"Out:{format_tokens(total_tokens['output'])}  "
+        f"Rsn:{format_tokens(total_tokens['reasoning'])}  "
+        f"{duration}[/dim]"
     )
 
 

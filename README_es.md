@@ -50,16 +50,6 @@ Eso es todo. Verás el desglose completo de costos de la **sesión actual** incl
 | `!costs --agent sdd-apply` | Filtrar por nombre de agente |
 | `!costs --json` | Salida JSON para procesamiento |
 
-### Ventana de terminal separada
-
-Si el output se corta en el terminal de OpenCode, ábrelo en una ventana separada:
-
-```
-!costs --window
-```
-
-Esto abre una nueva ventana de terminal con el reporte completo de la sesión actual sin truncar.
-
 ## Uso fuera de OpenCode
 
 Desde un terminal normal:
@@ -76,9 +66,6 @@ costs --all
 
 # JSON para procesamiento adicional
 costs --json | jq '.summary.total_cost'
-
-# Abrir en ventana separada
-costs --window
 ```
 
 ## Ejemplo de salida

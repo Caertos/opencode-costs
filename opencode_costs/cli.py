@@ -19,7 +19,7 @@ from .db import (
     get_db,
 )
 from .formatters import print_all_stats, print_last_n, print_session
-from .models import SessionNode, build_tree, flatten_tree
+from .models import SessionNode, build_tree
 
 
 def main() -> None:
@@ -36,7 +36,6 @@ Examples:
   costs --all                  Global statistics
   costs --json                 JSON output
   costs --agent sdd-apply      Filter by agent
-  costs --window               Open in separate terminal window
         """,
     )
     parser.add_argument("--version", "-v", action="version", version=f"%(prog)s {__version__}")
@@ -46,15 +45,8 @@ Examples:
     parser.add_argument("--agent", help="Filter by agent name")
     parser.add_argument("--json", "-j", action="store_true", help="Output as JSON")
     parser.add_argument("--db", help="Path to database", default=str(DB_PATH))
-    parser.add_argument("--window", "-w", action="store_true",
-                        help="Open output in a separate terminal window")
 
     args = parser.parse_args()
-
-    # Handle --window: re-exec in a new terminal
-    if args.window:
-        _open_in_window(sys.argv[1:])
-        return
 
     db_path = Path(args.db)
     try:
@@ -92,7 +84,7 @@ Examples:
                 cwd = os.getcwd()
                 row = conn.execute(QUERY_RECENT_SESSION_BY_DIR, (cwd,)).fetchone()
                 if not row:
-                    # Fallback to global recent session
+                    # Fallback to global recent session with data
                     row = conn.execute(QUERY_RECENT_SESSION).fetchone()
             else:
                 row = conn.execute(QUERY_RECENT_SESSION).fetchone()
@@ -133,40 +125,6 @@ def _filter_by_agent(roots: list[SessionNode], agent: str) -> list[SessionNode]:
         return filtered
 
     return _filter(roots)
-
-
-def _open_in_window(extra_args: list[str]) -> None:
-    """Open costs in a separate terminal window."""
-    import shutil
-    import subprocess
-
-    # Use the installed 'costs' command (avoids relative import issues)
-    costs_bin = shutil.which("costs")
-    if not costs_bin:
-        print("Error: 'costs' command not found in PATH", file=sys.stderr)
-        sys.exit(1)
-
-    filtered_args = [a for a in extra_args if a not in ("--window", "-w")]
-    cmd_parts = [costs_bin] + filtered_args
-    cmd = " ".join(cmd_parts)
-
-    # Try different terminal emulators
-    terminals = [
-        ["mate-terminal", "--", "bash", "-c", f"{cmd}; echo ''; echo 'Presiona Enter para cerrar...'; read"],
-        ["gnome-terminal", "--", "bash", "-c", f"{cmd}; echo ''; echo 'Press Enter to close...'; read"],
-        ["xfce4-terminal", "-e", f"bash -c '{cmd}; echo; echo Press Enter to close; read'"],
-        ["xterm", "-e", f"bash -c '{cmd}; echo; echo Press Enter to close; read'"],
-    ]
-
-    for terminal_cmd in terminals:
-        try:
-            subprocess.Popen(terminal_cmd, start_new_session=True)
-            return
-        except FileNotFoundError:
-            continue
-
-    print("Error: No supported terminal emulator found", file=sys.stderr)
-    sys.exit(1)
 
 
 def _print_all_json(conn: Any) -> None:

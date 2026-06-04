@@ -12,7 +12,8 @@ SELECT id, parent_id, agent, model, cost,
        time_created, time_updated, title
 FROM session
 WHERE parent_id IS NULL
-ORDER BY time_updated DESC
+  AND (cost > 0 OR tokens_input > 0 OR tokens_output > 0)
+ORDER BY time_created DESC
 LIMIT 1
 """
 
@@ -23,6 +24,7 @@ SELECT id, parent_id, agent, model, cost,
        time_created, time_updated, title
 FROM session
 WHERE parent_id IS NULL AND directory = ?
+  AND (cost > 0 OR tokens_input > 0 OR tokens_output > 0)
 ORDER BY time_created DESC
 LIMIT 1
 """
@@ -67,7 +69,8 @@ SELECT id, parent_id, agent, model, cost,
        time_created, time_updated, title
 FROM session
 WHERE parent_id IS NULL
-ORDER BY time_updated DESC
+  AND (cost > 0 OR tokens_input > 0 OR tokens_output > 0)
+ORDER BY time_created DESC
 LIMIT ?
 """
 
