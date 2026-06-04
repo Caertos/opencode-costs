@@ -127,14 +127,16 @@ def _filter_by_agent(roots: list[SessionNode], agent: str) -> list[SessionNode]:
 
 def _open_in_window(extra_args: list[str]) -> None:
     """Open costs in a separate terminal window."""
-    import os
+    import shutil
     import subprocess
 
-    script = Path(__file__).parent.parent / "opencode_costs" / "__main__.py"
-    if not script.exists():
-        script = Path(__file__)
+    # Use the installed 'costs' command (avoids relative import issues)
+    costs_bin = shutil.which("costs")
+    if not costs_bin:
+        print("Error: 'costs' command not found in PATH", file=sys.stderr)
+        sys.exit(1)
 
-    cmd_parts = ["python3", str(script)] + extra_args
+    cmd_parts = [costs_bin] + extra_args
     cmd = " ".join(cmd_parts)
 
     # Try different terminal emulators
@@ -152,9 +154,8 @@ def _open_in_window(extra_args: list[str]) -> None:
         except FileNotFoundError:
             continue
 
-    # Fallback: just run normally
-    print("Warning: No supported terminal emulator found. Running inline.", file=sys.stderr)
-    os.execvp("python3", ["python3", str(script)] + extra_args)
+    print("Error: No supported terminal emulator found", file=sys.stderr)
+    sys.exit(1)
 
 
 def _print_all_json(conn: Any) -> None:
