@@ -136,7 +136,8 @@ def _open_in_window(extra_args: list[str]) -> None:
         print("Error: 'costs' command not found in PATH", file=sys.stderr)
         sys.exit(1)
 
-    cmd_parts = [costs_bin] + extra_args
+    filtered_args = [a for a in extra_args if a not in ("--window", "-w")]
+    cmd_parts = [costs_bin] + filtered_args
     cmd = " ".join(cmd_parts)
 
     # Try different terminal emulators
