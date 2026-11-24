@@ -43,7 +43,7 @@
   "scripts": {
     "build": "npx --yes esbuild@0.25.0 src/tui.tsx --bundle --format=esm --packages=external --jsx=automatic --jsx-import-source=@opentui/solid --outfile=dist/tui.js",
     "prepublishOnly": "npm run build && npm test",
-    "test": "node --test test/"
+    "test": "node --test test/report.test.ts"
   },
   "peerDependencies": {
     "@opentui/core": ">=0.4.0 <0.6",
