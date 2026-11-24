@@ -5,7 +5,6 @@
 [![npm version](https://img.shields.io/npm/v/opencode-costs-tui.svg)](https://www.npmjs.com/package/opencode-costs-tui)
 [![npm downloads](https://img.shields.io/npm/dm/opencode-costs-tui.svg)](https://www.npmjs.com/package/opencode-costs-tui)
 [![license](https://img.shields.io/npm/l/opencode-costs-tui.svg)](LICENSE)
-[![CI](https://github.com/Caertos/opencode-costs/actions/workflows/ci.yml/badge.svg)](https://github.com/Caertos/opencode-costs/actions/workflows/ci.yml)
 
 Sidebar cost panel for **OpenCode 2.x**: cost and tokens per agent for the active session **and every subagent below it**.
 
@@ -31,11 +30,7 @@ So 2.0 drops the CLI and the Python engine entirely. The panel now reads the ses
 
 ## Install
 
-```sh
-opencode plugin add opencode-costs-tui
-```
-
-If your OpenCode build does not accept package plugin specs (it registers server plugins instead), add the package to the TUI list yourself:
+TUI plugins are listed in `~/.config/opencode/cli.json`, not in `opencode.jsonc`. (`opencode plugin add` registers **server** plugins, which is not what this package is.)
 
 ```json
 // ~/.config/opencode/cli.json
