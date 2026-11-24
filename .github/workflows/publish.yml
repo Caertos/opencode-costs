@@ -1,54 +1,48 @@
-name: Build and Publish
+name: Publish
 
 on:
   push:
-    branches: [main]
-  release:
-    types: [published]
+    tags: ["v*"]
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build distribution
+  verify:
+    name: Verify version and tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.12"
+          node-version: "24"
 
-      - name: Install build dependencies
-        run: pip install "setuptools>=68.0,<75" wheel build
-
-      - name: Build package
-        run: python -m build
-
-      - name: Check package
+      - name: Version must match the tag
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          pip install twine
-          twine check dist/*
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          echo "tag=$tag package=$pkg"
+          test "$tag" = "$pkg"
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
+      - name: Run tests
+        run: npm test
 
-  publish-pypi:
-    name: Publish to PyPI
-    needs: build
+  publish:
+    name: Publish to npm
+    needs: verify
     runs-on: ubuntu-latest
-    environment: pypi
     permissions:
+      contents: read
       id-token: write
     steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
+      - uses: actions/checkout@v4
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Publish with provenance
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

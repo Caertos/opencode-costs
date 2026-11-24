@@ -73,3 +73,7 @@ venv.bak/
 # OS
 .DS_Store
 Thumbs.db
+
+# Node
+node_modules/
+npm-debug.log*

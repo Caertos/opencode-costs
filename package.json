@@ -1,0 +1,45 @@
+{
+  "name": "opencode-costs-tui",
+  "version": "2.0.0",
+  "description": "Sidebar cost panel for OpenCode: per-agent cost and tokens for the current session and its subagents",
+  "type": "module",
+  "main": "./src/tui.tsx",
+  "exports": {
+    ".": "./src/tui.tsx",
+    "./tui": "./src/tui.tsx"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "tui",
+    "sidebar",
+    "cost",
+    "tokens",
+    "subagent"
+  ],
+  "author": "Carlos",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Caertos/opencode-costs.git"
+  },
+  "homepage": "https://github.com/Caertos/opencode-costs#readme",
+  "bugs": {
+    "url": "https://github.com/Caertos/opencode-costs/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "peerDependencies": {
+    "@opentui/core": ">=0.6.6",
+    "@opentui/solid": ">=0.6.6",
+    "solid-js": ">=1.9.0"
+  }
+}

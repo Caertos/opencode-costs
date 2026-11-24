@@ -1,106 +1,74 @@
 # opencode-costs
 
-[![PyPI version](https://img.shields.io/pypi/v/opencode-costs.svg)](https://pypi.org/project/opencode-costs/)
-[![Downloads](https://img.shields.io/pypi/dm/opencode-costs.svg)](https://pypi.org/project/opencode-costs/)
-[![License](https://img.shields.io/pypi/l/opencode-costs.svg)](https://github.com/Caertos/opencode-costs/blob/main/LICENSE)
-[![Python](https://img.shields.io/pypi/pyversions/opencode-costs.svg)](https://pypi.org/project/opencode-costs/)
+Panel de costes en la barra lateral de **OpenCode 2.x**: coste y tokens por agente de la sesión activa **y de todos sus subagentes**.
 
-> **Read in [English](README.md)**
+![Panel de opencode-costs en el sidebar](docs/images/sidebar.png)
 
-Reportador de costos para [OpenCode](https://opencode.ai) — desglose detallado por agente y sub-agente.
+## Qué muestra
 
-La TUI de OpenCode solo muestra el costo del agente principal. Esta herramienta muestra el ** panorama completo**: agente principal + todos los sub-agentes con sus costos, tokens y modelos individuales.
+- **Cabecera**: coste total de la familia de sesiones (la sesión más todos sus descendientes), con un conmutador `▾`/`▸`.
+- **Una fila por agente**: coste, porcentaje sobre el total de la familia y sangría según la profundidad del subagente.
+- **Pie**: número de sesiones de la familia y tokens agregados de entrada / salida / razonamiento.
+- **En vivo**: se repinta con cada evento de sesión que emite OpenCode, más una sincronización de seguridad cada 30 segundos.
 
-## ¿Por qué?
+Haz clic en la cabecera para plegar el panel; la elección se guarda en el estado duradero del plugin.
 
-Cuando usas OpenCode con orquestadores SDD o tareas delegadas, el costo real está oculto. Una sesión puede mostrar $0.50 pero los sub-agentes en realidad gastaron $5.00. `opencode-costs` te muestra la verdad.
+## Por qué 2.0 es una reescritura
+
+La versión 1.x era un CLI en Python (`costs`) que leía la base SQLite de OpenCode. Se rompió con OpenCode 2.x por dos motivos independientes:
+
+1. **La base de datos cambió.** OpenCode 1.x escribía las sesiones en `session`; 2.x escribe las nuevas en `session_v2` (y los mensajes en `session_message`). Las tablas antiguas dejan de recibir filas, así que el CLI seguía mostrando una sesión vieja y sus subagentes desaparecían.
+2. **Los plugins de TUI cambiaron.** En OpenCode 2.x un plugin de barra lateral es un **paquete npm** que usa la API `@opencode/plugin/tui`; los archivos locales y las entradas antiguas de `tui.json` no se cargan. Tampoco cabe un comando de menú al lado.
+
+Por eso 2.0 elimina el CLI y el motor en Python. El panel lee el almacén de sesiones de OpenCode en ejecución: sin SQLite, sin proceso externo y sin un segundo runtime. Como contrapartida, **solo soporta OpenCode 2.x**; `1.x` deja de estar soportado.
 
 ## Instalación
 
-```bash
-# Desde GitHub
-pip install git+https://github.com/caertos/opencode-costs.git
-
-# O clonar e instalar
-git clone https://github.com/caertos/opencode-costs.git
-cd opencode-costs
-pip install .
+```sh
+opencode plugin add opencode-costs-tui
 ```
 
-## Uso dentro de OpenCode
+O:
 
-**Este es el caso de uso principal.** Dentro de OpenCode, presiona `!` para ejecutar comandos de terminal:
-
-```
-!costs
+```sh
+curl -fsSL https://raw.githubusercontent.com/caertos/opencode-costs/main/install.sh | sh
 ```
 
-Eso es todo. Verás el desglose completo de costos de la **sesión actual** incluyendo todos los sub-agentes.
+Reinicia OpenCode (o ejecuta `/reload`). El panel aparece al principio de la barra lateral de la sesión.
 
-> **Auto-detección**: Al ejecutar dentro de OpenCode, la herramienta detecta automáticamente tu sesión actual comparando el directorio de trabajo. No necesitas pasar IDs de sesión manualmente.
+Desinstalar:
 
-### Referencia rápida
-
-| Comando | Qué hace |
-|---------|----------|
-| `!costs` | Desglose de costos de la sesión actual |
-| `!costs --all` | Estadísticas globales de todas las sesiones |
-| `!costs --last 5` | Resumen de las últimas 5 sesiones |
-| `!costs --session ID` | Sesión específica por ID |
-| `!costs --agent sdd-apply` | Filtrar por nombre de agente |
-| `!costs --json` | Salida JSON para procesamiento |
-
-## Uso fuera de OpenCode
-
-Desde un terminal normal:
-
-```bash
-# Sesión más reciente
-costs
-
-# Últimas 10 sesiones
-costs --last 10
-
-# Estadísticas globales
-costs --all
-
-# JSON para procesamiento adicional
-costs --json | jq '.summary.total_cost'
+```sh
+opencode plugin remove opencode-costs-tui
 ```
 
-## Ejemplo de salida
+## Qué significan los números
 
-```
-╭──────────────────────────────────────────────────────────────────────╮
-│ COST REPORT  ses_abc123  Mi título de sesión                        │
-╰──────────────────────────────────────────────────────────────────────╯
-╭─────────────────────────────── RESUMEN TOTAL ────────────────────────╮
-│   Cost Total         $2.52                                           │
-│   Tokens Input      574.9K                                           │
-│   Tokens Output      16.2K                                           │
-│   Reasoning           6.1K                                           │
-│   Duración         31m 38s                                           │
-╰──────────────────────────────────────────────────────────────────────╯
-                                        DESGLOSE POR AGENTE
-╭───────────────────────────┬──────────┬──────────────┬────────╮
-│ Agente                    │ Sesiones │        Costo │      % │
-├───────────────────────────┼──────────┼──────────────┼────────┤
-│ sdd-orchestrator-copilot  │    1     │        $0.98 │  38.8% │
-│   sdd-explore-copilot     │    2     │        $1.00 │  39.6% │
-│   sdd-apply-copilot       │    1     │        $0.54 │  21.6% │
-├───────────────────────────┼──────────┼──────────────┼────────┤
-│ TOTAL                     │    4     │        $2.52 │  100%  │
-╰───────────────────────────┴──────────┴──────────────┴────────╯
-```
-
-## Cómo funciona
-
-Lee directamente la base de datos SQLite de OpenCode en `~/.local/share/opencode/opencode.db`. No necesita claves API, servicios externos ni rastreo.
+- **Coste**: sale de la contabilidad de sesiones de OpenCode. Si el proveedor o el modelo no tienen precio configurado (algunas capas gratuitas, modelos locales), el coste es `$0.00` y los tokens se siguen mostrando.
+- **Familia**: la sesión que estás viendo más todas aquellas cuya cadena de `parentID` empieza ahí. Incluye los subagentes que crean las herramientas de tarea/delegación.
+- **Filas de agente**: agrupadas por nombre de agente; si un agente ejecutó varias sub-sesiones, se muestra la suma y el total de sesiones aparece en el pie.
 
 ## Requisitos
 
-- Python 3.10+
-- `rich` (se instala automáticamente)
+- OpenCode **2.x** con la API de plugins de TUI (verificado en 2.4.0).
+- Sin Python, sin acceso a la base de datos y sin claves: el plugin solo formatea datos que el host ya tiene.
+
+## Desarrollo
+
+```sh
+npm test          # tests de lógica pura (node --test, sin dependencias)
+```
+
+Para probar un checkout local antes de publicar, apunta OpenCode al repositorio como paquete git:
+
+```sh
+# ~/.config/opencode/cli.json
+{
+  "plugins": ["git+file:///ruta/absoluta/a/opencode-costs"]
+}
+```
+
+Reinicia la TUI. Acuérdate de quitar esa entrada antes de volver al paquete publicado.
 
 ## Licencia
 
