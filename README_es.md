@@ -10,6 +10,8 @@ Panel de costes en la barra lateral de **OpenCode 2.x**: coste y tokens por agen
 
 ![Panel de opencode-costs en el sidebar](docs/images/sidebar.png)
 
+> **Tokens en lugar de dólares.** OpenCode 1.x guardaba un coste en dólares por sesión, así que el CLI antiguo mostraba el gasto de la sesión padre y de sus subagentes en USD. OpenCode 2.x reporta `cost: 0` para modelos de suscripción o gratuitos — por ejemplo todo el catálogo de `opencode-go` — aunque el modelo tenga precio de lista. Por eso el panel muestra dólares **cuando el host los reporta**, y si no, pasa a tokens en el total, en el valor de cada sesión y en el porcentaje. Nunca inventa un precio. Para el gasto facturado de un plan Go, usa el panel de cuota.
+
 ## Qué muestra
 
 - **Cabecera**: coste total de la familia de sesiones (la sesión más todos sus descendientes), con un conmutador `▾`/`▸`.

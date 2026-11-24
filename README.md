@@ -10,6 +10,8 @@ Sidebar cost panel for **OpenCode 2.x**: cost and tokens per agent for the activ
 
 ![opencode-costs sidebar panel](docs/images/sidebar.png)
 
+> **Tokens instead of dollars.** OpenCode 1.x stored a dollar cost per session, so the old CLI showed the spend of the parent session and its subagents in USD. OpenCode 2.x reports `cost: 0` for subscription or free models — for example the whole `opencode-go` catalog — even though the model has a list price. The panel therefore shows dollars **when the host reports them**, and falls back to tokens for the family total, the per-session value and the percentage. It never invents a price. If you want the billed spend of a Go plan, use the quota panel.
+
 ## What it shows
 
 - **Header**: total cost of the session family (the session plus all its descendants), with a `▾`/`▸` toggle.
