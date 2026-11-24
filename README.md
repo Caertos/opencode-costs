@@ -13,7 +13,7 @@ Sidebar cost panel for **OpenCode 2.x**: cost and tokens per agent for the activ
 ## What it shows
 
 - **Header**: total cost of the session family (the session plus all its descendants), with a `▾`/`▸` toggle.
-- **One row per agent**: cost, share of the family total and an indent that mirrors the subagent depth.
+- **One row per session**: cost (or tokens, when the model has no price), share of the family total and an indent that mirrors the subagent depth. Finished subagents stay listed.
 - **Footer**: number of sessions in the family and aggregate input / output / reasoning tokens.
 - **Live**: it re-renders on every session event OpenCode pushes, plus a 30-second safety sync.
 
@@ -53,7 +53,7 @@ Uninstall: remove `opencode-costs-tui` from `~/.config/opencode/cli.json` → `p
 
 - **Cost** comes from OpenCode's own session accounting. If the provider or model has no price configured (some free tiers, local models), the cost is `$0.00` while tokens are still reported.
 - **Family** = the session you are looking at, plus every session whose `parentID` chain starts there. Subagents created by task/delegation tools are included.
-- **Agent rows** are grouped by agent name; an agent that ran several sub-sessions shows the sum and the count in the footer.
+- **Rows** are individual sessions, so you can see which subagent spent what. When the whole family reports `$0.00` (unpriced or free model), the value and percentage columns switch to tokens instead of showing a column of zeros.
 
 ## Requirements
 

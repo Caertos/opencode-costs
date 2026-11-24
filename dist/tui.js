@@ -3,6 +3,7 @@ import { Plugin } from "@opencode/plugin/tui";
 import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 
 // src/report.ts
+var LABEL_MAX = 20;
 function zeroTokens() {
   return { input: 0, output: 0, reasoning: 0, cache_read: 0, cache_write: 0 };
 }
@@ -24,6 +25,9 @@ function addTokens(target, source) {
   target.cache_read += source.cache_read;
   target.cache_write += source.cache_write;
 }
+function tokenTotal(tokens) {
+  return tokens.input + tokens.output + tokens.reasoning;
+}
 function formatCost(value) {
   const amount = Number(value) || 0;
   if (amount === 0) return "$0.00";
@@ -36,6 +40,9 @@ function formatTokens(value) {
   if (count >= 1e6) return `${(count / 1e6).toFixed(1)}M`;
   if (count >= 1e3) return `${(count / 1e3).toFixed(count >= 1e4 ? 0 : 1)}K`;
   return String(count);
+}
+function formatValue(value, metric) {
+  return metric === "cost" ? formatCost(value) : formatTokens(value);
 }
 function buildFamily(sessions, sessionID, rootID, limit = 60) {
   const byId = /* @__PURE__ */ new Map();
@@ -66,32 +73,34 @@ function buildFamily(sessions, sessionID, rootID, limit = 60) {
   }
   return nodes;
 }
+function label(node, depth) {
+  const raw = depth === 0 ? node.agent || "session" : node.title || node.agent || "session";
+  return raw.length > LABEL_MAX ? `${raw.slice(0, LABEL_MAX - 1)}\u2026` : raw;
+}
 function summarize(nodes) {
-  const agents = /* @__PURE__ */ new Map();
   const tokens = zeroTokens();
-  let total = 0;
-  for (const node of nodes) {
-    const agent = node.agent || "unknown";
-    const nodeTokens = sessionTokens(node);
-    const nodeCost = Number(node.cost) || 0;
-    total += nodeCost;
-    addTokens(tokens, nodeTokens);
-    const entry = agents.get(agent) ?? {
-      agent,
-      model: node.model?.id ?? "unknown",
-      depth: node.depth ?? 0,
-      sessions: 0,
-      cost: 0,
-      tokens: zeroTokens()
-    };
-    entry.sessions += 1;
-    entry.cost += nodeCost;
-    entry.depth = Math.min(entry.depth, node.depth ?? 0);
-    addTokens(entry.tokens, nodeTokens);
-    agents.set(agent, entry);
+  const perNode = nodes.map((node) => ({ node, tokens: sessionTokens(node), cost: Number(node.cost) || 0 }));
+  for (const entry of perNode) {
+    addTokens(tokens, entry.tokens);
   }
-  const rows = [...agents.values()].sort((a, b) => b.cost - a.cost || b.tokens.input - a.tokens.input);
-  return { rows, total, tokens, sessions: nodes.length };
+  const totalCost = perNode.reduce((sum, entry) => sum + entry.cost, 0);
+  const metric = totalCost > 0 ? "cost" : "tokens";
+  const total = metric === "cost" ? totalCost : tokenTotal(tokens);
+  const rows = perNode.map((entry) => {
+    const value = metric === "cost" ? entry.cost : tokenTotal(entry.tokens);
+    return {
+      id: entry.node.id,
+      label: label(entry.node, entry.node.depth ?? 0),
+      agent: entry.node.agent || "unknown",
+      depth: entry.node.depth ?? 0,
+      cost: entry.cost,
+      tokens: entry.tokens,
+      value,
+      percent: total > 0 ? value / total * 100 : 0
+    };
+  });
+  rows.sort((a, b) => a.depth - b.depth || b.value - a.value);
+  return { rows, metric, total, totalCost, tokens, sessions: nodes.length };
 }
 
 // src/tui.tsx
@@ -112,18 +121,13 @@ function palette(theme) {
     border: color(theme?.border?.subtle) ?? color(theme?.border?.base)
   };
 }
-function AgentLine(props) {
+function SessionLine(props) {
   const colors = () => palette(props.theme);
-  const label = () => {
-    const indent = "  ".repeat(Math.min(props.row.depth ?? 0, 2));
-    const raw = props.row.agent || "unknown";
-    const name = raw.length > 17 ? `${raw.slice(0, 16)}\u2026` : raw;
-    return `${indent}${name}`.padEnd(20);
-  };
-  const percent = () => props.total > 0 ? `${Math.round(props.row.cost / props.total * 100)}%` : "0%";
+  const label2 = () => `${"  ".repeat(Math.min(props.row.depth ?? 0, 2))}${props.row.label ?? ""}`.slice(0, 20).padEnd(20);
+  const percent = () => `${Math.round(props.row.percent ?? 0)}%`;
   return /* @__PURE__ */ jsxs("box", { flexDirection: "row", children: [
-    /* @__PURE__ */ jsx("text", { fg: colors().text, children: label() }),
-    /* @__PURE__ */ jsx("text", { fg: colors().success, children: formatCost(props.row.cost).padStart(8) }),
+    /* @__PURE__ */ jsx("text", { fg: colors().text, children: label2() }),
+    /* @__PURE__ */ jsx("text", { fg: colors().success, children: formatValue(props.row.value, props.metric).padStart(8) }),
     /* @__PURE__ */ jsx("text", { fg: colors().muted, children: percent().padStart(5) })
   ] });
 }
@@ -162,7 +166,8 @@ function CostsPanel(props) {
   });
   const header = () => {
     if (summary().sessions === 0) return "Costs \xB7 \u2026";
-    return `Costs \xB7 ${formatCost(summary().total)}`;
+    if (summary().metric === "tokens") return `Costs \xB7 ${formatTokens(summary().total)} tok`;
+    return `Costs \xB7 ${formatValue(summary().total, "cost")}`;
   };
   return /* @__PURE__ */ jsxs("box", { flexDirection: "column", marginBottom: 1, children: [
     /* @__PURE__ */ jsxs("box", { flexDirection: "row", justifyContent: "space-between", onMouseDown: () => props.onToggle(), children: [
@@ -170,7 +175,7 @@ function CostsPanel(props) {
       /* @__PURE__ */ jsx("text", { fg: colors().muted, children: props.expanded ? "\u25BE" : "\u25B8" })
     ] }),
     /* @__PURE__ */ jsx(Show, { when: props.expanded, children: /* @__PURE__ */ jsxs(Show, { when: summary().sessions > 0, fallback: /* @__PURE__ */ jsx("text", { fg: colors().muted, children: "loading\u2026" }), children: [
-      /* @__PURE__ */ jsx(For, { each: summary().rows, children: (row) => /* @__PURE__ */ jsx(AgentLine, { row, total: summary().total, theme: props.context.theme }) }),
+      /* @__PURE__ */ jsx(For, { each: summary().rows, children: (row) => /* @__PURE__ */ jsx(SessionLine, { row, metric: summary().metric, theme: props.context.theme }) }),
       /* @__PURE__ */ jsx("text", { fg: colors().border, children: "\u2500".repeat(24) }),
       /* @__PURE__ */ jsx("text", { fg: colors().muted, children: `${summary().sessions} sessions` }),
       /* @__PURE__ */ jsx("text", { fg: colors().muted, children: `In ${formatTokens(summary().tokens.input)} \xB7 Out ${formatTokens(

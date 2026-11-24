@@ -3,18 +3,21 @@
 /**
  * opencode-costs-tui — sidebar cost panel for OpenCode 2.x.
  *
- * Shows the active session and every subagent below it (recursively) with a
- * per-agent breakdown: cost, share of the family total, sessions and aggregate
- * tokens. All numbers come from OpenCode's own session store, so there is no
- * database access and no external process.
+ * Shows the active session and every subagent below it (recursively), one row
+ * per session so finished subagents stay visible. All numbers come from
+ * OpenCode's own session store, so there is no database access and no external
+ * process.
  *
- * The header is clickable and collapses the table; the state is kept in the
+ * When the family reports no money (unpriced or free models), the value column
+ * switches to tokens instead of showing a column of $0.00.
+ *
+ * The header is clickable and collapses the panel; the state is kept in the
  * plugin's durable store. Data refreshes on every session event the host
  * pushes, plus a 30 s safety sync.
  */
 import { Plugin } from "@opencode/plugin/tui";
 import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
-import { buildFamily, formatCost, formatTokens, summarize } from "./report.ts";
+import { buildFamily, formatTokens, formatValue, summarize } from "./report.ts";
 
 const id = "opencode-costs-tui";
 const REFRESH_MS = 30_000;
@@ -36,20 +39,15 @@ function palette(theme: any) {
   };
 }
 
-function AgentLine(props: { row: any; total: number; theme: any }) {
+function SessionLine(props: { row: any; metric: "cost" | "tokens"; theme: any }) {
   const colors = () => palette(props.theme);
-  const label = () => {
-    const indent = "  ".repeat(Math.min(props.row.depth ?? 0, 2));
-    const raw = props.row.agent || "unknown";
-    const name = raw.length > 17 ? `${raw.slice(0, 16)}…` : raw;
-    return `${indent}${name}`.padEnd(20);
-  };
-  const percent = () => (props.total > 0 ? `${Math.round((props.row.cost / props.total) * 100)}%` : "0%");
+  const label = () => `${"  ".repeat(Math.min(props.row.depth ?? 0, 2))}${props.row.label ?? ""}`.slice(0, 20).padEnd(20);
+  const percent = () => `${Math.round(props.row.percent ?? 0)}%`;
 
   return (
     <box flexDirection="row">
       <text fg={colors().text}>{label()}</text>
-      <text fg={colors().success}>{formatCost(props.row.cost).padStart(8)}</text>
+      <text fg={colors().success}>{formatValue(props.row.value, props.metric).padStart(8)}</text>
       <text fg={colors().muted}>{percent().padStart(5)}</text>
     </box>
   );
@@ -95,7 +93,8 @@ function CostsPanel(props: { context: any; sessionID: string; expanded: boolean;
 
   const header = () => {
     if (summary().sessions === 0) return "Costs · …";
-    return `Costs · ${formatCost(summary().total)}`;
+    if (summary().metric === "tokens") return `Costs · ${formatTokens(summary().total)} tok`;
+    return `Costs · ${formatValue(summary().total, "cost")}`;
   };
 
   return (
@@ -107,7 +106,7 @@ function CostsPanel(props: { context: any; sessionID: string; expanded: boolean;
       <Show when={props.expanded}>
         <Show when={summary().sessions > 0} fallback={<text fg={colors().muted}>loading…</text>}>
           <For each={summary().rows}>
-            {(row) => <AgentLine row={row} total={summary().total} theme={props.context.theme} />}
+            {(row) => <SessionLine row={row} metric={summary().metric} theme={props.context.theme} />}
           </For>
           <text fg={colors().border}>{"─".repeat(24)}</text>
           <text fg={colors().muted}>{`${summary().sessions} sessions`}</text>

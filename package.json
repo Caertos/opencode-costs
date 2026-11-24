@@ -1,6 +1,6 @@
 {
   "name": "opencode-costs-tui",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Sidebar cost panel for OpenCode: per-agent cost and tokens for the current session and its subagents",
   "type": "module",
   "main": "./dist/tui.js",

@@ -11,15 +11,6 @@ export type Tokens = {
   cache_write: number;
 };
 
-export type AgentRow = {
-  agent: string;
-  model: string;
-  depth: number;
-  sessions: number;
-  cost: number;
-  tokens: Tokens;
-};
-
 export type FamilyNode = {
   id: string;
   parentID?: string;
@@ -35,6 +26,30 @@ export type FamilyNode = {
   time?: { created?: number };
   depth?: number;
 };
+
+export type SessionRow = {
+  id: string;
+  label: string;
+  agent: string;
+  depth: number;
+  cost: number;
+  tokens: Tokens;
+  /** The metric used for the value and percentage columns. */
+  value: number;
+  percent: number;
+};
+
+export type Summary = {
+  rows: SessionRow[];
+  /** "cost" when the family reports money, "tokens" when every session is unpriced. */
+  metric: "cost" | "tokens";
+  total: number;
+  totalCost: number;
+  tokens: Tokens;
+  sessions: number;
+};
+
+const LABEL_MAX = 20;
 
 export function zeroTokens(): Tokens {
   return { input: 0, output: 0, reasoning: 0, cache_read: 0, cache_write: 0 };
@@ -60,6 +75,10 @@ export function addTokens(target: Tokens, source: Tokens): void {
   target.cache_write += source.cache_write;
 }
 
+export function tokenTotal(tokens: Tokens): number {
+  return tokens.input + tokens.output + tokens.reasoning;
+}
+
 export function formatCost(value: number | undefined): string {
   const amount = Number(value) || 0;
   if (amount === 0) return "$0.00";
@@ -73,6 +92,10 @@ export function formatTokens(value: number | undefined): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
   if (count >= 1_000) return `${(count / 1_000).toFixed(count >= 10_000 ? 0 : 1)}K`;
   return String(count);
+}
+
+export function formatValue(value: number, metric: "cost" | "tokens"): string {
+  return metric === "cost" ? formatCost(value) : formatTokens(value);
 }
 
 /** Root plus every descendant, breadth-first, each node tagged with a depth. */
@@ -111,41 +134,45 @@ export function buildFamily(sessions: FamilyNode[], sessionID: string, rootID?: 
   return nodes;
 }
 
-export type Summary = {
-  rows: AgentRow[];
-  total: number;
-  tokens: Tokens;
-  sessions: number;
-};
+function label(node: FamilyNode, depth: number): string {
+  const raw = depth === 0 ? node.agent || "session" : node.title || node.agent || "session";
+  return raw.length > LABEL_MAX ? `${raw.slice(0, LABEL_MAX - 1)}…` : raw;
+}
 
-/** Group a family by agent: cost, tokens and session count per agent. */
+/**
+ * One row per session, in tree order, so finished subagents stay visible.
+ *
+ * When the family reports no money at all (unpriced models, free tiers), the
+ * value column switches to tokens; otherwise every row would read $0.00.
+ */
 export function summarize(nodes: FamilyNode[]): Summary {
-  const agents = new Map<string, AgentRow>();
   const tokens = zeroTokens();
-  let total = 0;
+  const perNode = nodes.map((node) => ({ node, tokens: sessionTokens(node), cost: Number(node.cost) || 0 }));
 
-  for (const node of nodes) {
-    const agent = node.agent || "unknown";
-    const nodeTokens = sessionTokens(node);
-    const nodeCost = Number(node.cost) || 0;
-    total += nodeCost;
-    addTokens(tokens, nodeTokens);
-
-    const entry = agents.get(agent) ?? {
-      agent,
-      model: node.model?.id ?? "unknown",
-      depth: node.depth ?? 0,
-      sessions: 0,
-      cost: 0,
-      tokens: zeroTokens(),
-    };
-    entry.sessions += 1;
-    entry.cost += nodeCost;
-    entry.depth = Math.min(entry.depth, node.depth ?? 0);
-    addTokens(entry.tokens, nodeTokens);
-    agents.set(agent, entry);
+  for (const entry of perNode) {
+    addTokens(tokens, entry.tokens);
   }
 
-  const rows = [...agents.values()].sort((a, b) => b.cost - a.cost || b.tokens.input - a.tokens.input);
-  return { rows, total, tokens, sessions: nodes.length };
+  const totalCost = perNode.reduce((sum, entry) => sum + entry.cost, 0);
+  const metric: "cost" | "tokens" = totalCost > 0 ? "cost" : "tokens";
+  const total = metric === "cost" ? totalCost : tokenTotal(tokens);
+
+  const rows: SessionRow[] = perNode.map((entry) => {
+    const value = metric === "cost" ? entry.cost : tokenTotal(entry.tokens);
+    return {
+      id: entry.node.id,
+      label: label(entry.node, entry.node.depth ?? 0),
+      agent: entry.node.agent || "unknown",
+      depth: entry.node.depth ?? 0,
+      cost: entry.cost,
+      tokens: entry.tokens,
+      value,
+      percent: total > 0 ? (value / total) * 100 : 0,
+    };
+  });
+
+  // Highest spender first inside each depth, keeping parents above their children.
+  rows.sort((a, b) => a.depth - b.depth || b.value - a.value);
+
+  return { rows, metric, total, totalCost, tokens, sessions: nodes.length };
 }

@@ -13,7 +13,7 @@ Panel de costes en la barra lateral de **OpenCode 2.x**: coste y tokens por agen
 ## Qué muestra
 
 - **Cabecera**: coste total de la familia de sesiones (la sesión más todos sus descendientes), con un conmutador `▾`/`▸`.
-- **Una fila por agente**: coste, porcentaje sobre el total de la familia y sangría según la profundidad del subagente.
+- **Una fila por sesión**: coste (o tokens, cuando el modelo no tiene precio), porcentaje sobre el total de la familia y sangría según la profundidad del subagente. Los subagentes terminados siguen listados.
 - **Pie**: número de sesiones de la familia y tokens agregados de entrada / salida / razonamiento.
 - **En vivo**: se repinta con cada evento de sesión que emite OpenCode, más una sincronización de seguridad cada 30 segundos.
 
@@ -53,7 +53,7 @@ Desinstalar: elimina `opencode-costs-tui` de `~/.config/opencode/cli.json` → `
 
 - **Coste**: sale de la contabilidad de sesiones de OpenCode. Si el proveedor o el modelo no tienen precio configurado (algunas capas gratuitas, modelos locales), el coste es `$0.00` y los tokens se siguen mostrando.
 - **Familia**: la sesión que estás viendo más todas aquellas cuya cadena de `parentID` empieza ahí. Incluye los subagentes que crean las herramientas de tarea/delegación.
-- **Filas de agente**: agrupadas por nombre de agente; si un agente ejecutó varias sub-sesiones, se muestra la suma y el total de sesiones aparece en el pie.
+- **Filas**: son sesiones individuales, para ver qué subagente gastó qué. Cuando toda la familia reporta `$0.00` (modelo sin precio o gratuito), las columnas de valor y porcentaje pasan a tokens en vez de mostrar una columna de ceros.
 
 ## Requisitos
 

@@ -5,30 +5,31 @@ import {
   buildFamily,
   formatCost,
   formatTokens,
+  formatValue,
   sessionTokens,
   summarize,
 } from "../src/report.ts";
 
-const session = (id, parentID, agent, cost, input, output, created = 0) => ({
+const session = (id, parentID, agent, cost, input, output, created = 0, title = "") => ({
   id,
   parentID,
   agent,
+  title,
   model: { id: "deepseek-v4.1-flash" },
   cost,
   tokens: { input, output, reasoning: 0, cache: { read: 0, write: 0 } },
   time: { created },
 });
 
-test("buildFamily returns the root plus every descendant with depths", () => {
-  const sessions = [
-    session("root", undefined, "orchestrator", 1, 100, 10, 1),
-    session("a", "root", "explorer", 0.3, 50, 5, 2),
-    session("b", "root", "implementer", 0.6, 70, 7, 3),
-    session("b1", "b", "implementer", 0.1, 5, 1, 4),
-    session("other", undefined, "build", 9, 999, 99, 5),
-  ];
+const family = [
+  session("root", undefined, "orchestrator", 1, 100, 10, 1),
+  session("a", "root", "explorer", 0.3, 50, 5, 2, "explore the repo"),
+  session("b", "root", "implementer", 0.6, 70, 7, 3, "implement the change"),
+  session("b1", "b", "implementer", 0.1, 5, 1, 4, "nested follow-up"),
+];
 
-  const nodes = buildFamily(sessions, "a", "root");
+test("buildFamily returns the root plus every descendant with depths", () => {
+  const nodes = buildFamily([...family, session("other", undefined, "build", 9, 999, 99, 5)], "a", "root");
 
   assert.deepEqual(
     nodes.map((node) => [node.id, node.depth]),
@@ -42,50 +43,59 @@ test("buildFamily returns the root plus every descendant with depths", () => {
 });
 
 test("buildFamily falls back to the requested session when the root is unknown", () => {
-  const sessions = [session("root", undefined, "orchestrator", 0.5, 10, 1, 1)];
-
-  const nodes = buildFamily(sessions, "root");
+  const nodes = buildFamily([session("root", undefined, "orchestrator", 0.5, 10, 1, 1)], "root");
 
   assert.equal(nodes.length, 1);
   assert.equal(nodes[0].id, "root");
 });
 
-test("summarize groups by agent and totals the family", () => {
-  const nodes = buildFamily(
-    [
-      session("root", undefined, "orchestrator", 1, 100, 10, 1),
-      session("a", "root", "explorer", 0.3, 50, 5, 2),
-      session("b", "root", "implementer", 0.6, 70, 7, 3),
-      session("b1", "b", "implementer", 0.1, 5, 1, 4),
-    ],
-    "root",
-  );
-
-  const summary = summarize(nodes);
+test("summarize keeps one row per session and totals the family", () => {
+  const summary = summarize(buildFamily(family, "root"));
 
   assert.equal(summary.sessions, 4);
+  assert.equal(summary.metric, "cost");
   assert.equal(summary.total, 2);
+  assert.equal(summary.totalCost, 2);
   assert.equal(summary.tokens.input, 225);
   assert.deepEqual(
-    summary.rows.map((row) => [row.agent, row.cost, row.sessions]),
+    summary.rows.map((row) => [row.label, row.depth, row.cost]),
     [
-      ["orchestrator", 1, 1],
-      ["implementer", 0.7, 2],
-      ["explorer", 0.3, 1],
+      ["orchestrator", 0, 1],
+      ["implement the change", 1, 0.6],
+      ["explore the repo", 1, 0.3],
+      ["nested follow-up", 2, 0.1],
     ],
   );
-  assert.equal(summary.rows.find((row) => row.agent === "implementer").depth, 1);
 });
 
-test("summarize keeps agents whose sessions report zero cost", () => {
-  const summary = summarize([
-    { id: "a", agent: "free-model", cost: 0, tokens: { input: 120, output: 4 }, depth: 0 },
-  ]);
+test("percentages are relative to the family total", () => {
+  const summary = summarize(buildFamily(family, "root"));
 
-  assert.equal(summary.rows.length, 1);
-  assert.equal(summary.rows[0].cost, 0);
-  assert.equal(summary.total, 0);
-  assert.equal(summary.tokens.input, 120);
+  assert.equal(Math.round(summary.rows[0].percent), 50);
+  assert.equal(Math.round(summary.rows[1].percent), 30);
+  assert.equal(Math.round(summary.rows[3].percent), 5);
+});
+
+test("an unpriced family switches the value column to tokens", () => {
+  const free = family.map((entry) => ({ ...entry, cost: 0 }));
+
+  const summary = summarize(buildFamily(free, "root"));
+
+  assert.equal(summary.metric, "tokens");
+  assert.equal(summary.totalCost, 0);
+  assert.equal(summary.total, 248);
+  assert.equal(summary.rows[0].value, 110);
+  assert.equal(Math.round(summary.rows[0].percent), 44);
+  assert.equal(summary.rows.length, 4);
+});
+
+test("finished subagents stay visible even when a sibling reports nothing", () => {
+  const withIdle = [...family, session("c", "root", "implementer", 0, 0, 0, 6, "cancelled task")];
+
+  const summary = summarize(buildFamily(withIdle, "root"));
+
+  assert.equal(summary.sessions, 5);
+  assert.ok(summary.rows.some((row) => row.label === "cancelled task"));
 });
 
 test("sessionTokens tolerates missing token blocks", () => {
@@ -98,7 +108,7 @@ test("sessionTokens tolerates missing token blocks", () => {
   });
 });
 
-test("formatCost and formatTokens match the sidebar scale", () => {
+test("format helpers match the sidebar scale", () => {
   assert.equal(formatCost(0), "$0.00");
   assert.equal(formatCost(0.0042), "$0.0042");
   assert.equal(formatCost(0.42), "$0.420");
@@ -107,6 +117,8 @@ test("formatCost and formatTokens match the sidebar scale", () => {
   assert.equal(formatTokens(1_500), "1.5K");
   assert.equal(formatTokens(25_000), "25K");
   assert.equal(formatTokens(2_500_000), "2.5M");
+  assert.equal(formatValue(0.42, "cost"), "$0.420");
+  assert.equal(formatValue(42_000, "tokens"), "42K");
 });
 
 test("buildFamily stops at the row limit", () => {
