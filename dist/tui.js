@@ -106,7 +106,18 @@ function summarize(nodes) {
 // src/tui.tsx
 import { jsx, jsxs } from "@opentui/solid/jsx-runtime";
 var id = "opencode-costs-tui";
-var REFRESH_MS = 3e4;
+var REFRESH_MS = 1e4;
+var EVENTS = [
+  "session.created",
+  "session.deleted",
+  "session.idle",
+  "session.execution.started",
+  "session.execution.succeeded",
+  "session.execution.failed",
+  "session.execution.interrupted",
+  "session.message.content.updated",
+  "session.metadata.updated"
+];
 function color(candidate) {
   if (candidate == null) return void 0;
   if (typeof candidate === "string") return candidate;
@@ -144,24 +155,31 @@ function CostsPanel(props) {
   });
   const summary = createMemo(() => summarize(family()));
   const colors = createMemo(() => palette(props.context.theme));
-  async function refresh() {
+  function refresh() {
+    setRevision((value) => value + 1);
     const sync = props.context.data.session.sync;
-    const rootID = props.context.data.session.root?.(props.sessionID) ?? props.sessionID;
-    if (typeof sync === "function") {
+    if (typeof sync !== "function") return;
+    for (const node of family().slice(0, 20)) {
       try {
-        await sync.call(props.context.data.session, rootID);
+        void Promise.resolve(sync.call(props.context.data.session, node.id)).catch(() => {
+        });
       } catch {
       }
     }
-    setRevision((value) => value + 1);
   }
   onMount(() => {
-    void refresh();
-    const timer = setInterval(() => void refresh(), REFRESH_MS);
-    const stop = props.context.data.on?.("session.updated", () => setRevision((value) => value + 1));
+    refresh();
+    const timer = setInterval(refresh, REFRESH_MS);
+    const unsubscribers = EVENTS.map((type) => {
+      try {
+        return props.context.data.on?.(type, () => setRevision((value) => value + 1));
+      } catch {
+        return void 0;
+      }
+    }).filter(Boolean);
     onCleanup(() => {
       clearInterval(timer);
-      if (stop) stop();
+      for (const stop of unsubscribers) stop?.();
     });
   });
   const header = () => {

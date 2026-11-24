@@ -20,7 +20,20 @@ import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-j
 import { buildFamily, formatTokens, formatValue, summarize } from "./report.ts";
 
 const id = "opencode-costs-tui";
-const REFRESH_MS = 30_000;
+const REFRESH_MS = 10_000;
+
+/** Every host event that can change tokens, cost or the session tree. */
+const EVENTS = [
+  "session.created",
+  "session.deleted",
+  "session.idle",
+  "session.execution.started",
+  "session.execution.succeeded",
+  "session.execution.failed",
+  "session.execution.interrupted",
+  "session.message.content.updated",
+  "session.metadata.updated",
+];
 
 /** Theme tokens moved between releases; only strings and RGBA objects are colors. */
 function color(candidate: any): any {
@@ -68,26 +81,34 @@ function CostsPanel(props: { context: any; sessionID: string; expanded: boolean;
   const summary = createMemo(() => summarize(family()));
   const colors = createMemo(() => palette(props.context.theme));
 
-  async function refresh() {
+  // Repaint first, then ask the host to refresh data in the background:
+  // awaiting session.sync() can hang on an idle session and would freeze the panel.
+  function refresh() {
+    setRevision((value) => value + 1);
     const sync = props.context.data.session.sync;
-    const rootID = props.context.data.session.root?.(props.sessionID) ?? props.sessionID;
-    if (typeof sync === "function") {
+    if (typeof sync !== "function") return;
+    for (const node of family().slice(0, 20)) {
       try {
-        await sync.call(props.context.data.session, rootID);
+        void Promise.resolve(sync.call(props.context.data.session, node.id)).catch(() => {});
       } catch {
-        // a failed refresh must never break the sidebar
+        // a failed sync must never break the sidebar
       }
     }
-    setRevision((value) => value + 1);
   }
 
   onMount(() => {
-    void refresh();
-    const timer = setInterval(() => void refresh(), REFRESH_MS);
-    const stop = props.context.data.on?.("session.updated", () => setRevision((value) => value + 1));
+    refresh();
+    const timer = setInterval(refresh, REFRESH_MS);
+    const unsubscribers = EVENTS.map((type) => {
+      try {
+        return props.context.data.on?.(type, () => setRevision((value) => value + 1));
+      } catch {
+        return undefined;
+      }
+    }).filter(Boolean);
     onCleanup(() => {
       clearInterval(timer);
-      if (stop) stop();
+      for (const stop of unsubscribers) stop?.();
     });
   });
 
