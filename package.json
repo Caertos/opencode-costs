@@ -1,15 +1,21 @@
 {
   "name": "opencode-costs-tui",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Sidebar cost panel for OpenCode: per-agent cost and tokens for the current session and its subagents",
   "type": "module",
-  "main": "./src/tui.tsx",
+  "main": "./dist/tui.js",
   "exports": {
-    ".": "./src/tui.tsx",
-    "./tui": "./src/tui.tsx"
+    ".": {
+      "types": "./dist/tui.d.ts",
+      "import": "./dist/tui.js"
+    },
+    "./tui": {
+      "types": "./dist/tui.d.ts",
+      "import": "./dist/tui.js"
+    }
   },
   "files": [
-    "src",
+    "dist",
     "README.md"
   ],
   "keywords": [
@@ -35,11 +41,13 @@
     "access": "public"
   },
   "scripts": {
+    "build": "npx --yes esbuild@0.25.0 src/tui.tsx --bundle --format=esm --packages=external --jsx=automatic --jsx-import-source=@opentui/solid --outfile=dist/tui.js",
+    "prepublishOnly": "npm run build && npm test",
     "test": "node --test test/"
   },
   "peerDependencies": {
-    "@opentui/core": ">=0.6.6",
-    "@opentui/solid": ">=0.6.6",
-    "solid-js": ">=1.9.0"
+    "@opentui/core": ">=0.4.0 <0.6",
+    "@opentui/solid": ">=0.4.0 <0.6",
+    "solid-js": ">=1.9.12 <2"
   }
 }

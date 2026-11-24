@@ -27,6 +27,14 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Build must match dist/
+        run: |
+          npm run build
+          if ! git diff --quiet -- dist; then
+            echo "dist/ is stale. Run 'npm run build' and commit the result." >&2
+            exit 1
+          fi
+
   publish:
     name: Publish to npm
     needs: verify

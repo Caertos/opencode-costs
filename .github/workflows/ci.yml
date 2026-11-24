@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Tests and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build the plugin
+        run: npm run build
+
+      - name: dist/ must match the source
+        run: |
+          if ! git diff --quiet -- dist; then
+            echo "dist/ is stale. Run 'npm run build' and commit the result." >&2
+            git diff --stat -- dist
+            exit 1
+          fi

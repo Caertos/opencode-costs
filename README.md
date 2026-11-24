@@ -1,5 +1,12 @@
 # opencode-costs
 
+**English** · [Español](README_es.md)
+
+[![npm version](https://img.shields.io/npm/v/opencode-costs-tui.svg)](https://www.npmjs.com/package/opencode-costs-tui)
+[![npm downloads](https://img.shields.io/npm/dm/opencode-costs-tui.svg)](https://www.npmjs.com/package/opencode-costs-tui)
+[![license](https://img.shields.io/npm/l/opencode-costs-tui.svg)](LICENSE)
+[![CI](https://github.com/Caertos/opencode-costs/actions/workflows/ci.yml/badge.svg)](https://github.com/Caertos/opencode-costs/actions/workflows/ci.yml)
+
 Sidebar cost panel for **OpenCode 2.x**: cost and tokens per agent for the active session **and every subagent below it**.
 
 ![opencode-costs sidebar panel](docs/images/sidebar.png)
@@ -28,7 +35,16 @@ So 2.0 drops the CLI and the Python engine entirely. The panel now reads the ses
 opencode plugin add opencode-costs-tui
 ```
 
-Or:
+If your OpenCode build does not accept package plugin specs (it registers server plugins instead), add the package to the TUI list yourself:
+
+```json
+// ~/.config/opencode/cli.json
+{
+  "plugins": ["opencode-costs-tui"]
+}
+```
+
+Or run the installer, which patches that file for you:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/caertos/opencode-costs/main/install.sh | sh
@@ -36,11 +52,7 @@ curl -fsSL https://raw.githubusercontent.com/caertos/opencode-costs/main/install
 
 Restart OpenCode (or run `/reload`). The panel appears at the top of the session sidebar.
 
-Uninstall:
-
-```sh
-opencode plugin remove opencode-costs-tui
-```
+Uninstall: remove `opencode-costs-tui` from `~/.config/opencode/cli.json` → `plugins`.
 
 ## What the numbers mean
 
@@ -56,19 +68,11 @@ opencode plugin remove opencode-costs-tui
 ## Development
 
 ```sh
-npm test          # pure-logic tests (node --test, no dependencies)
+npm test          # pure-logic tests (node --test)
+npm run build     # src/tui.tsx -> dist/tui.js (esbuild via npx)
 ```
 
-To try a local checkout before publishing, point OpenCode at the repository as a git package:
-
-```sh
-# ~/.config/opencode/cli.json
-{
-  "plugins": ["git+file:///absolute/path/to/opencode-costs"]
-}
-```
-
-Then restart the TUI. Remember to remove that entry before going back to the published package.
+`dist/` is built and committed, because OpenCode only activates packages whose TUI entrypoint is a JavaScript file.
 
 ## License
 

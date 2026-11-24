@@ -1,5 +1,12 @@
 # opencode-costs
 
+**Español** · [English](README.md)
+
+[![versión npm](https://img.shields.io/npm/v/opencode-costs-tui.svg)](https://www.npmjs.com/package/opencode-costs-tui)
+[![descargas npm](https://img.shields.io/npm/dm/opencode-costs-tui.svg)](https://www.npmjs.com/package/opencode-costs-tui)
+[![licencia](https://img.shields.io/npm/l/opencode-costs-tui.svg)](LICENSE)
+[![CI](https://github.com/Caertos/opencode-costs/actions/workflows/ci.yml/badge.svg)](https://github.com/Caertos/opencode-costs/actions/workflows/ci.yml)
+
 Panel de costes en la barra lateral de **OpenCode 2.x**: coste y tokens por agente de la sesión activa **y de todos sus subagentes**.
 
 ![Panel de opencode-costs en el sidebar](docs/images/sidebar.png)
@@ -28,7 +35,16 @@ Por eso 2.0 elimina el CLI y el motor en Python. El panel lee el almacén de ses
 opencode plugin add opencode-costs-tui
 ```
 
-O:
+Si tu versión de OpenCode no acepta specs de paquete para plugins (registra plugins de servidor en su lugar), añade el paquete a la lista de TUI a mano:
+
+```json
+// ~/.config/opencode/cli.json
+{
+  "plugins": ["opencode-costs-tui"]
+}
+```
+
+O ejecuta el instalador, que parchea ese archivo por ti:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/caertos/opencode-costs/main/install.sh | sh
@@ -36,11 +52,7 @@ curl -fsSL https://raw.githubusercontent.com/caertos/opencode-costs/main/install
 
 Reinicia OpenCode (o ejecuta `/reload`). El panel aparece al principio de la barra lateral de la sesión.
 
-Desinstalar:
-
-```sh
-opencode plugin remove opencode-costs-tui
-```
+Desinstalar: elimina `opencode-costs-tui` de `~/.config/opencode/cli.json` → `plugins`.
 
 ## Qué significan los números
 
@@ -56,19 +68,11 @@ opencode plugin remove opencode-costs-tui
 ## Desarrollo
 
 ```sh
-npm test          # tests de lógica pura (node --test, sin dependencias)
+npm test          # tests de lógica pura (node --test)
+npm run build     # src/tui.tsx -> dist/tui.js (esbuild vía npx)
 ```
 
-Para probar un checkout local antes de publicar, apunta OpenCode al repositorio como paquete git:
-
-```sh
-# ~/.config/opencode/cli.json
-{
-  "plugins": ["git+file:///ruta/absoluta/a/opencode-costs"]
-}
-```
-
-Reinicia la TUI. Acuérdate de quitar esa entrada antes de volver al paquete publicado.
+`dist/` se compila y se versiona, porque OpenCode solo activa paquetes cuyo entrypoint de TUI es un archivo JavaScript.
 
 ## Licencia
 
