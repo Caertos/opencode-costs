@@ -30,6 +30,11 @@ The 1.x version was a Python CLI (`costs`) that read OpenCode's SQLite database.
 
 So 2.0 drops the CLI and the Python engine entirely. The panel now reads the session store of the running OpenCode: no SQLite, no external process, no second runtime. That also means **it only supports OpenCode 2.x**; `1.x` is no longer supported.
 
+
+## Known limitation (OpenCode 2.4.0)
+
+The sidebar slot is not repainted when a plugin updates its own state. The panel fetches fresh data every 10 seconds (verified), but the host only paints the new values on its next render — for example when you click the header or switch session. That is a host behaviour, not a data problem; `renderer.requestRender()` and host-store writes do not change it.
+
 ## Install
 
 TUI plugins are listed in `~/.config/opencode/cli.json`, not in `opencode.jsonc`. (`opencode plugin add` registers **server** plugins, which is not what this package is.)

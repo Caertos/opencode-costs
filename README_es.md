@@ -30,6 +30,11 @@ La versión 1.x era un CLI en Python (`costs`) que leía la base SQLite de OpenC
 
 Por eso 2.0 elimina el CLI y el motor en Python. El panel lee el almacén de sesiones de OpenCode en ejecución: sin SQLite, sin proceso externo y sin un segundo runtime. Como contrapartida, **solo soporta OpenCode 2.x**; `1.x` deja de estar soportado.
 
+
+## Limitación conocida (OpenCode 2.4.0)
+
+La barra lateral no se repinta cuando un plugin cambia su propio estado. El panel pide datos frescos cada 10 segundos (verificado), pero el host solo pinta los valores nuevos en su siguiente render — por ejemplo al hacer clic en la cabecera o al cambiar de sesión. Es comportamiento del host, no un problema de datos; `renderer.requestRender()` ni escribir en un store del host lo cambian.
+
 ## Instalación
 
 Los plugins de TUI se listan en `~/.config/opencode/cli.json`, no en `opencode.jsonc`. (`opencode plugin add` registra plugins **de servidor**, que no es el caso de este paquete.)
