@@ -68,10 +68,13 @@ function SessionLine(props: { row: any; metric: "cost" | "tokens"; theme: any })
 
 function CostsPanel(props: { context: any; sessionID: string; expanded: boolean; onToggle: () => void }) {
   const [revision, setRevision] = createSignal(0);
+  // Sessions fetched over HTTP, because the TUI store is not refreshed for
+  // subagent sessions while they run.
+  const [fetched, setFetched] = createSignal<any[] | undefined>(undefined);
 
   const family = createMemo(() => {
     revision();
-    const sessions = props.context.data.session.list?.() ?? [];
+    const sessions = fetched() ?? props.context.data.session.list?.() ?? [];
     const rootID = props.context.data.session.root?.(props.sessionID) ?? props.sessionID;
     const nodes = buildFamily(sessions, props.sessionID, rootID);
     if (nodes.length > 0) return nodes;
@@ -81,33 +84,49 @@ function CostsPanel(props: { context: any; sessionID: string; expanded: boolean;
   const summary = createMemo(() => summarize(family()));
   const colors = createMemo(() => palette(props.context.theme));
 
-  // Repaint first, then ask the host to refresh data in the background:
-  // awaiting session.sync() can hang on an idle session and would freeze the panel.
+  async function load() {
+    const client = props.context.client;
+    if (!client?.session?.list) return;
+    const active = props.context.data.session.get?.(props.sessionID);
+    const directory = active?.location?.directory ?? props.context.location?.directory;
+    try {
+      const response = directory
+        ? await client.session.list({ directory, limit: 200 })
+        : await client.session.list({ limit: 200 });
+      const list = Array.isArray(response) ? response : response?.data;
+      if (Array.isArray(list) && list.length > 0) setFetched(list);
+    } catch {
+      // keep the last known data; never break the sidebar
+    }
+  }
+
   function refresh() {
     setRevision((value) => value + 1);
-    const sync = props.context.data.session.sync;
-    if (typeof sync !== "function") return;
-    for (const node of family().slice(0, 20)) {
-      try {
-        void Promise.resolve(sync.call(props.context.data.session, node.id)).catch(() => {});
-      } catch {
-        // a failed sync must never break the sidebar
-      }
-    }
+    void load();
   }
 
   onMount(() => {
     refresh();
     const timer = setInterval(refresh, REFRESH_MS);
+    // Bursts of events (a running subagent emits many) collapse into one load.
+    let pending: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
+      if (pending) return;
+      pending = setTimeout(() => {
+        pending = undefined;
+        refresh();
+      }, 800);
+    };
     const unsubscribers = EVENTS.map((type) => {
       try {
-        return props.context.data.on?.(type, () => setRevision((value) => value + 1));
+        return props.context.data.on?.(type, schedule);
       } catch {
         return undefined;
       }
     }).filter(Boolean);
     onCleanup(() => {
       clearInterval(timer);
+      if (pending) clearTimeout(pending);
       for (const stop of unsubscribers) stop?.();
     });
   });

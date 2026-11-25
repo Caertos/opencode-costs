@@ -144,9 +144,10 @@ function SessionLine(props) {
 }
 function CostsPanel(props) {
   const [revision, setRevision] = createSignal(0);
+  const [fetched, setFetched] = createSignal(void 0);
   const family = createMemo(() => {
     revision();
-    const sessions = props.context.data.session.list?.() ?? [];
+    const sessions = fetched() ?? props.context.data.session.list?.() ?? [];
     const rootID = props.context.data.session.root?.(props.sessionID) ?? props.sessionID;
     const nodes = buildFamily(sessions, props.sessionID, rootID);
     if (nodes.length > 0) return nodes;
@@ -155,30 +156,43 @@ function CostsPanel(props) {
   });
   const summary = createMemo(() => summarize(family()));
   const colors = createMemo(() => palette(props.context.theme));
+  async function load() {
+    const client = props.context.client;
+    if (!client?.session?.list) return;
+    const active = props.context.data.session.get?.(props.sessionID);
+    const directory = active?.location?.directory ?? props.context.location?.directory;
+    try {
+      const response = directory ? await client.session.list({ directory, limit: 200 }) : await client.session.list({ limit: 200 });
+      const list = Array.isArray(response) ? response : response?.data;
+      if (Array.isArray(list) && list.length > 0) setFetched(list);
+    } catch {
+    }
+  }
   function refresh() {
     setRevision((value) => value + 1);
-    const sync = props.context.data.session.sync;
-    if (typeof sync !== "function") return;
-    for (const node of family().slice(0, 20)) {
-      try {
-        void Promise.resolve(sync.call(props.context.data.session, node.id)).catch(() => {
-        });
-      } catch {
-      }
-    }
+    void load();
   }
   onMount(() => {
     refresh();
     const timer = setInterval(refresh, REFRESH_MS);
+    let pending;
+    const schedule = () => {
+      if (pending) return;
+      pending = setTimeout(() => {
+        pending = void 0;
+        refresh();
+      }, 800);
+    };
     const unsubscribers = EVENTS.map((type) => {
       try {
-        return props.context.data.on?.(type, () => setRevision((value) => value + 1));
+        return props.context.data.on?.(type, schedule);
       } catch {
         return void 0;
       }
     }).filter(Boolean);
     onCleanup(() => {
       clearInterval(timer);
+      if (pending) clearTimeout(pending);
       for (const stop of unsubscribers) stop?.();
     });
   });
