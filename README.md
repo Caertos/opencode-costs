@@ -33,7 +33,7 @@ So 2.0 drops the CLI and the Python engine entirely. The panel now reads the ses
 
 ## Known limitation (OpenCode 2.4.0)
 
-The sidebar slot is not repainted when a plugin updates its own state. The panel fetches fresh data every 10 seconds (verified), but the host only paints the new values on its next render — for example when you click the header or switch session. That is a host behaviour, not a data problem; `renderer.requestRender()` and host-store writes do not change it.
+The sidebar slot is not repainted when a plugin updates its own state. The panel fetches fresh data every 10 seconds (verified), but the host only paints the new values on its next render — for example when you click the header or switch session. That is a host behaviour, not a data problem; `renderer.requestRender()` and host-store writes do not change it. Tracked upstream: https://github.com/anomalyco/opencode/issues/66252.
 
 ## Install
 

@@ -33,7 +33,7 @@ Por eso 2.0 elimina el CLI y el motor en Python. El panel lee el almacén de ses
 
 ## Limitación conocida (OpenCode 2.4.0)
 
-La barra lateral no se repinta cuando un plugin cambia su propio estado. El panel pide datos frescos cada 10 segundos (verificado), pero el host solo pinta los valores nuevos en su siguiente render — por ejemplo al hacer clic en la cabecera o al cambiar de sesión. Es comportamiento del host, no un problema de datos; `renderer.requestRender()` ni escribir en un store del host lo cambian.
+La barra lateral no se repinta cuando un plugin cambia su propio estado. El panel pide datos frescos cada 10 segundos (verificado), pero el host solo pinta los valores nuevos en su siguiente render — por ejemplo al hacer clic en la cabecera o al cambiar de sesión. Es comportamiento del host, no un problema de datos; `renderer.requestRender()` ni escribir en un store del host lo cambian. Reportado upstream: https://github.com/anomalyco/opencode/issues/66252.
 
 ## Instalación
 
